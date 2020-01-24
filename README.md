@@ -1,3 +1,6 @@
+
+<img src="https://raw.githubusercontent.com/Danielhp95/gym-connect4/master/connect4.png" alt="drawing" width="300"/>
+
 # Connect 4
 
 Connect 4 is a **two player**, **zero-sum**, **symetrical** connection game, in
@@ -15,3 +18,5 @@ The gym environment takes the following parameters:
 + **Width**: Number of rows on the board. Default: 7
 + **Height**: Height of each board row. Default: 6
 + **Connect**: Number of chips of the same colour that need to be placed in a valid pattern to win the game. Default: 4
+
+Use `gym.make` to pass a specific parameterization. For instance: `gym.make('Connect4-v0', height=6, width=9, connect=2)`
