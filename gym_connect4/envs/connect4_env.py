@@ -1,7 +1,9 @@
 from copy import deepcopy
+import numpy as np
 import gym
-from gym.spaces import Box, Discrete
+from gym.spaces import Box, Discrete, Tuple
 from colorama import Fore
+
 
 class Connect4Env(gym.Env):
     """
@@ -14,17 +16,13 @@ class Connect4Env(gym.Env):
     """
 
     def __init__(self, width=7, height=6, connect=4):
-        self.playerJustMoved = 2 # Player 1 will move now
-        self.winner = 0 # 0 = no winner, 1 = Player 1 wins, 2 = Player 2 wins.
-
         self.width = width
         self.height = height
         self.connect = connect
-        self.InitializeBoard()
 
-        self.observation_space = [Box(low=0, high=2,
-                                      shape=(self.width, self.height), dtype=int)
-                                  for _ in range(2)] # Two player game
+        self.observation_space = Tuple([Box(low=0, high=2,
+                                       shape=(self.width, self.height), dtype=int)
+                                       for _ in range(2)]) # Two player game
         self.action_space = Discrete(self.width)
 
         # Naive calculation. There are height * width individual cells
@@ -32,13 +30,19 @@ class Connect4Env(gym.Env):
         # invalid cases where a chip rests on top of an empy cell.
         self.state_space_size = (self.height * self.width) ** 3
 
-    def InitializeBoard(self):
+        self.reset()
+
+    def reset(self):
         """ 
         Initialises the Connect 4 gameboard.
         """
-        self.board = []
+        board = []
         for y in range(self.width):
-            self.board.append([0] * self.height)
+            board.append([0] * self.height)
+        self.playerJustMoved = 2 # Player 1 will move now
+        self.winner = 0 # 0 = no winner, 1 = Player 1 wins, 2 = Player 2 wins.
+        self.board = board
+        return np.array(board)
 
     def Clone(self):
         """ 
@@ -47,10 +51,10 @@ class Connect4Env(gym.Env):
               Because otherwise MCTS would be operating on the real game board.
         :returns: deep copy of this GameState
         """
-        st = Connect4State(width=self.width, height=self.height)
+        st = Connect4Env(width=self.width, height=self.height)
         st.playerJustMoved = self.playerJustMoved
         st.winner = self.winner
-        st.board = [self.board[col][:] for col in range(self.width)]
+        st.board = np.array([self.board[col][:] for col in range(self.width)])
         return st
 
     def step(self, movecol):
@@ -78,7 +82,7 @@ class Connect4Env(gym.Env):
             
         info = {}
         return [deepcopy(self.board), deepcopy(self.board)], reward_vector, \
-               self.winner == 0, info
+               self.winner != 0, info
             
     def get_moves(self):
         """
@@ -128,4 +132,4 @@ class Connect4Env(gym.Env):
                 s += [Fore.WHITE + '.', Fore.RED + 'X', Fore.YELLOW + 'O'][self.board[y][x]]
                 s += Fore.RESET
             s += "\n"
-        return s
+        print(s)
