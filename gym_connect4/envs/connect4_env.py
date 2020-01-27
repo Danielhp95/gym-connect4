@@ -39,12 +39,12 @@ class Connect4Env(gym.Env):
         board = []
         for y in range(self.width):
             board.append([0] * self.height)
-        self.playerJustMoved = 2 # Player 1 will move now
+        self.player_just_moved = 2 # Player 1 will move now
         self.winner = 0 # 0 = no winner, 1 = Player 1 wins, 2 = Player 2 wins.
         self.board = board
         return np.array(board)
 
-    def Clone(self):
+    def clone(self):
         """ 
         Creates a deep copy of the game state.
         NOTE: it is _really_ important that a copy is used during simulations
@@ -52,7 +52,7 @@ class Connect4Env(gym.Env):
         :returns: deep copy of this GameState
         """
         st = Connect4Env(width=self.width, height=self.height)
-        st.playerJustMoved = self.playerJustMoved
+        st.player_just_moved = self.player_just_moved
         st.winner = self.winner
         st.board = np.array([self.board[col][:] for col in range(self.width)])
         return st
@@ -71,12 +71,12 @@ class Connect4Env(gym.Env):
 
         row += 1
 
-        self.playerJustMoved = 3 - self.playerJustMoved
-        self.board[movecol][row] = self.playerJustMoved
+        self.player_just_moved = 3 - self.player_just_moved
+        self.board[movecol][row] = self.player_just_moved
         reward_vector = [0, 0]
 
         if self.does_move_win(movecol, row):
-            self.winner = self.playerJustMoved
+            self.winner = self.player_just_moved
             if self.winner == 1: reward_vector = [1, -1]
             else: reward_vector = [-1, 1]
             
