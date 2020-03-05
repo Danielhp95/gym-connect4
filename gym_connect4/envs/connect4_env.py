@@ -30,7 +30,7 @@ class Connect4Env(gym.Env):
                                        dtype=np.int32)
         self.observation_space = Tuple([player_observation_space
                                         for _ in range(self.num_players)])
-        self.action_space = Discrete(self.width)
+        self.action_space = Tuple([Discrete(self.width) for _ in range(self.num_players)])
 
         # Naive calculation. There are height * width individual cells
         # and each one can have 3 values. This is also encapsulates
