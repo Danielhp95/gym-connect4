@@ -97,7 +97,7 @@ class Connect4Env(gym.Env):
             if self.winner == 1: reward_vector = [1, -1]
             else: reward_vector = [-1, 1]
             
-        info = {}
+        info = {'legal_actions': self.get_moves()}
         return self.get_player_observations(), reward_vector, \
                self.winner != 0, info
             
