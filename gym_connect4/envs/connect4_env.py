@@ -1,3 +1,4 @@
+from typing import List
 from copy import deepcopy
 import numpy as np
 import gym
@@ -16,13 +17,19 @@ class Connect4Env(gym.Env):
     """
 
     def __init__(self, width=7, height=6, connect=4):
+        self.num_players = 2
+
         self.width = width
         self.height = height
         self.connect = connect
 
-        self.observation_space = Tuple([Box(low=0, high=2,
-                                       shape=(self.width, self.height), dtype=int)
-                                       for _ in range(2)]) # Two player game
+        # TODO! Update to make this into two channels
+        player_observation_space = Box(low=0, high=2,
+                                       shape=(self.num_players, 
+                                              self.width, self.height),
+                                       dtype=np.int32)
+        self.observation_space = Tuple([player_observation_space
+                                        for _ in range(self.num_players)])
         self.action_space = Discrete(self.width)
 
         # Naive calculation. There are height * width individual cells
@@ -32,17 +39,27 @@ class Connect4Env(gym.Env):
 
         self.reset()
 
-    def reset(self):
+    def reset(self) -> List[np.ndarray]:
         """ 
         Initialises the Connect 4 gameboard.
         """
-        board = []
-        for y in range(self.width):
-            board.append([0] * self.height)
+        self.board = np.zeros((self.width, self.height), dtype=np.int64)
+
         self.player_just_moved = 2 # Player 1 will move now
         self.winner = 0 # 0 = no winner, 1 = Player 1 wins, 2 = Player 2 wins.
-        self.board = board
-        return np.array(board)
+        return self.get_player_observations()
+
+    def filter_observation_player_perspective(self, player: int) -> List[np.ndarray]:
+        opponent = 1 if player == 2 else 2
+        # One hot channel encoding of the board
+        player_chips   = np.where(self.board == player, 1, 0)
+        opponent_chips = np.where(self.board == opponent, 1, 0)
+        return np.array([player_chips, opponent_chips])
+
+    def get_player_observations(self) -> List[np.ndarray]:
+        p1_state = self.filter_observation_player_perspective(1)
+        p2_state = np.copy(p1_state)[::-1]
+        return [p1_state, p2_state]
 
     def clone(self):
         """ 
@@ -81,7 +98,7 @@ class Connect4Env(gym.Env):
             else: reward_vector = [-1, 1]
             
         info = {}
-        return [deepcopy(self.board), deepcopy(self.board)], reward_vector, \
+        return self.get_player_observations(), reward_vector, \
                self.winner != 0, info
             
     def get_moves(self):
