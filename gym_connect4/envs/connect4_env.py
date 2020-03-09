@@ -11,9 +11,15 @@ class Connect4Env(gym.Env):
         GameState for the Connect 4 game.
         The board is represented as a 2D array (rows and columns).
         Each entry on the array can be:
-            - 0 = empty    (.)
-            - 1 = player 1 (X)
-            - 2 = player 2 (O)
+            0 = empty    (.)
+            1 = player 1 (X)
+            2 = player 2 (O)
+
+        Winner can be:
+            -1 = Draw
+             0 = No winner (yet)
+             1 = player 1 (X)
+             2 = player 2 (O) 
     """
 
     def __init__(self, width=7, height=6, connect=4):
@@ -46,7 +52,7 @@ class Connect4Env(gym.Env):
         self.board = np.zeros((self.width, self.height), dtype=np.int64)
 
         self.player_just_moved = 2 # Player 1 will move now
-        self.winner = 0 # 0 = no winner, 1 = Player 1 wins, 2 = Player 2 wins.
+        self.winner = 0 # -1 = draw, 0 = no winner, 1 = Player 1 wins, 2 = Player 2 wins.
         return self.get_player_observations()
 
     def filter_observation_player_perspective(self, player: int) -> List[np.ndarray]:
@@ -90,18 +96,25 @@ class Connect4Env(gym.Env):
 
         self.player_just_moved = 3 - self.player_just_moved
         self.board[movecol][row] = self.player_just_moved
-        reward_vector = [0, 0]
 
-        if self.does_move_win(movecol, row):
-            self.winner = self.player_just_moved
-            if self.winner == 1: reward_vector = [1, -1]
-            else: reward_vector = [-1, 1]
+        self.winner, reward_vector = self.check_for_episode_termination(movecol, row)
             
         zero_index_player_current_player = (3 - self.player_just_moved) - 1
         info = {'legal_actions': self.get_moves(),
                 'current_player': zero_index_player_current_player}
         return self.get_player_observations(), reward_vector, \
                self.winner != 0, info
+
+    def check_for_episode_termination(self, movecol, row):
+        winner, reward_vector = self.winner, [0, 0]
+        if self.does_move_win(movecol, row):
+            winner = self.player_just_moved
+            if winner == 1: reward_vector = [1, -1]
+            elif winner == 2: reward_vector = [-1, 1]
+        elif self.get_moves() == []:  # A draw has happened
+            winner = -1
+            reward_vector = [0, 0]
+        return winner, reward_vector
             
     def get_moves(self):
         """
