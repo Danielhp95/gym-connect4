@@ -29,7 +29,6 @@ class Connect4Env(gym.Env):
         self.height = height
         self.connect = connect
 
-        # TODO! Update to make this into two channels
         player_observation_space = Box(low=0, high=2,
                                        shape=(self.num_players, 
                                               self.width, self.height),
@@ -58,13 +57,15 @@ class Connect4Env(gym.Env):
     def filter_observation_player_perspective(self, player: int) -> List[np.ndarray]:
         opponent = 1 if player == 2 else 2
         # One hot channel encoding of the board
+        empty_positions = np.where(self.board == 0, 1, 0)
         player_chips   = np.where(self.board == player, 1, 0)
         opponent_chips = np.where(self.board == opponent, 1, 0)
-        return np.array([player_chips, opponent_chips])
+        return np.array([empty_positions, player_chips, opponent_chips])
 
     def get_player_observations(self) -> List[np.ndarray]:
         p1_state = self.filter_observation_player_perspective(1)
-        p2_state = np.copy(p1_state)[::-1]
+        p2_state = np.array([np.copy(p1_state[0]), 
+                             np.copy(p1_state[-1]), np.copy(p1_state[-2])])
         return [p1_state, p2_state]
 
     def clone(self):
