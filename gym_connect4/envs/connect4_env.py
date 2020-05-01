@@ -16,8 +16,8 @@ class Connect4Env(gym.Env):
             2 = player 2 (O)
 
         Winner can be:
+             None = No winner (yet)
             -1 = Draw
-             0 = No winner (yet)
              1 = player 1 (X)
              2 = player 2 (O) 
     """
@@ -29,8 +29,9 @@ class Connect4Env(gym.Env):
         self.height = height
         self.connect = connect
 
-        player_observation_space = Box(low=0, high=2,
-                                       shape=(self.num_players, 
+        # 3: Channels. Empty cells, p1 chips, p2 chips
+        player_observation_space = Box(low=0, high=1,
+                                       shape=(self.num_players + 1,
                                               self.width, self.height),
                                        dtype=np.int32)
         self.observation_space = Tuple([player_observation_space
@@ -48,22 +49,22 @@ class Connect4Env(gym.Env):
         """ 
         Initialises the Connect 4 gameboard.
         """
-        self.board = np.zeros((self.width, self.height), dtype=np.int64)
+        self.board = np.full((self.width, self.height), -1)
 
-        self.player_just_moved = 2 # Player 1 will move now
-        self.winner = 0 # -1 = draw, 0 = no winner, 1 = Player 1 wins, 2 = Player 2 wins.
+        self.current_player = 0 # Player 1 (represented by value 0) will move now
+        self.winner = None
         return self.get_player_observations()
 
     def filter_observation_player_perspective(self, player: int) -> List[np.ndarray]:
-        opponent = 1 if player == 2 else 2
+        opponent = 0 if player == 1 else 1
         # One hot channel encoding of the board
-        empty_positions = np.where(self.board == 0, 1, 0)
+        empty_positions = np.where(self.board == -1, 1, 0)
         player_chips   = np.where(self.board == player, 1, 0)
         opponent_chips = np.where(self.board == opponent, 1, 0)
         return np.array([empty_positions, player_chips, opponent_chips])
 
     def get_player_observations(self) -> List[np.ndarray]:
-        p1_state = self.filter_observation_player_perspective(1)
+        p1_state = self.filter_observation_player_perspective(0)
         p2_state = np.array([np.copy(p1_state[0]), 
                              np.copy(p1_state[-1]), np.copy(p1_state[-2])])
         return [p1_state, p2_state]
@@ -76,7 +77,7 @@ class Connect4Env(gym.Env):
         :returns: deep copy of this GameState
         """
         st = Connect4Env(width=self.width, height=self.height)
-        st.player_just_moved = self.player_just_moved
+        st.current_player = self.current_player
         st.winner = self.winner
         st.board = np.array([self.board[col][:] for col in range(self.width)])
         return st
@@ -87,31 +88,30 @@ class Connect4Env(gym.Env):
         specified by param movecol.
         :param movecol: column over which a chip will be dropped
         """
-        if not(movecol >= 0 and movecol <= self.width and self.board[movecol][self.height - 1] == 0):
+        if not(movecol >= 0 and movecol <= self.width and self.board[movecol][self.height - 1] == -1):
             raise IndexError(f'Invalid move. tried to place a chip on column {movecol} which is already full. Valid moves are: {self.get_moves()}')
         row = self.height - 1
-        while row >= 0 and self.board[movecol][row] == 0:
+        while row >= 0 and self.board[movecol][row] == -1:
             row -= 1
 
         row += 1
 
-        self.player_just_moved = 3 - self.player_just_moved
-        self.board[movecol][row] = self.player_just_moved
+        self.board[movecol][row] = self.current_player
+        self.current_player = 1 - self.current_player
 
         self.winner, reward_vector = self.check_for_episode_termination(movecol, row)
             
-        zero_index_player_current_player = (3 - self.player_just_moved) - 1
         info = {'legal_actions': self.get_moves(),
-                'current_player': zero_index_player_current_player}
+                'current_player': self.current_player}
         return self.get_player_observations(), reward_vector, \
-               self.winner != 0, info
+               self.winner is not None, info
 
     def check_for_episode_termination(self, movecol, row):
         winner, reward_vector = self.winner, [0, 0]
         if self.does_move_win(movecol, row):
-            winner = self.player_just_moved
-            if winner == 1: reward_vector = [1, -1]
-            elif winner == 2: reward_vector = [-1, 1]
+            winner = 1 - self.current_player
+            if winner == 0: reward_vector = [1, -1]
+            elif winner == 1: reward_vector = [-1, 1]
         elif self.get_moves() == []:  # A draw has happened
             winner = -1
             reward_vector = [0, 0]
@@ -121,9 +121,9 @@ class Connect4Env(gym.Env):
         """
         :returns: array with all possible moves, index of columns which aren't full
         """
-        if self.winner != 0:
+        if self.winner is not None: 
             return []
-        return [col for col in range(self.width) if self.board[col][self.height - 1] == 0]
+        return [col for col in range(self.width) if self.board[col][self.height - 1] == -1]
 
     def does_move_win(self, x, y):
         """ 
@@ -155,14 +155,14 @@ class Connect4Env(gym.Env):
         :param player: (int) player which we want to see if he / she is a winner
         :returns: winner from the perspective of the param player
         """
-        return player == self.winner
+        return +1 if player == self.winner else -1
 
     def render(self, mode='human'):
         if mode != 'human': raise NotImplementedError('Rendering has not been coded yet')
         s = ""
         for x in range(self.height - 1, -1, -1):
             for y in range(self.width):
-                s += [Fore.WHITE + '.', Fore.RED + 'X', Fore.YELLOW + 'O'][self.board[y][x]]
+                s += {-1: Fore.WHITE + '.', 0: Fore.RED + 'X', 1: Fore.YELLOW + 'O'}[self.board[y][x]]
                 s += Fore.RESET
             s += "\n"
         print(s)
