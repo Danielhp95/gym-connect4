@@ -10,4 +10,4 @@ setup(name='gym_connect4',
       author_email='madness@xcape.com',
       packages=find_packages(),
       install_requires=['gym', 'numpy', 'colorama']
-      )
+)
