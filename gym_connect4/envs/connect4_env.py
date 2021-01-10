@@ -19,7 +19,7 @@ class Connect4Env(gym.Env):
              None = No winner (yet)
             -1 = Draw
              1 = player 1 (X)
-             2 = player 2 (O) 
+             2 = player 2 (O)
     """
 
     def __init__(self, width=7, height=6, connect=4):
@@ -46,7 +46,7 @@ class Connect4Env(gym.Env):
         self.reset()
 
     def reset(self) -> List[np.ndarray]:
-        """ 
+        """
         Initialises the Connect 4 gameboard.
         """
         self.board = np.full((self.width, self.height), -1)
@@ -65,12 +65,12 @@ class Connect4Env(gym.Env):
 
     def get_player_observations(self) -> List[np.ndarray]:
         p1_state = self.filter_observation_player_perspective(0)
-        p2_state = np.array([np.copy(p1_state[0]), 
+        p2_state = np.array([np.copy(p1_state[0]),
                              np.copy(p1_state[-1]), np.copy(p1_state[-2])])
         return [p1_state, p2_state]
 
     def clone(self):
-        """ 
+        """
         Creates a deep copy of the game state.
         NOTE: it is _really_ important that a copy is used during simulations
               Because otherwise MCTS would be operating on the real game board.
@@ -83,7 +83,7 @@ class Connect4Env(gym.Env):
         return st
 
     def step(self, movecol):
-        """ 
+        """
         Changes this GameState by "dropping" a chip in the column
         specified by param movecol.
         :param movecol: column over which a chip will be dropped
@@ -100,7 +100,7 @@ class Connect4Env(gym.Env):
         self.current_player = 1 - self.current_player
 
         self.winner, reward_vector = self.check_for_episode_termination(movecol, row)
-            
+
         info = {'legal_actions': self.get_moves(),
                 'current_player': self.current_player}
         return self.get_player_observations(), reward_vector, \
@@ -116,17 +116,17 @@ class Connect4Env(gym.Env):
             winner = -1
             reward_vector = [0, 0]
         return winner, reward_vector
-            
+
     def get_moves(self):
         """
         :returns: array with all possible moves, index of columns which aren't full
         """
-        if self.winner is not None: 
+        if self.winner is not None:
             return []
         return [col for col in range(self.width) if self.board[col][self.height - 1] == -1]
 
     def does_move_win(self, x, y):
-        """ 
+        """
         Checks whether a newly dropped chip at position param x, param y
         wins the game.
         :param x: column index
@@ -151,10 +151,11 @@ class Connect4Env(gym.Env):
         return x >= 0 and x < self.width and y >= 0 and y < self.height
 
     def get_result(self, player):
-        """ 
+        """
         :param player: (int) player which we want to see if he / she is a winner
         :returns: winner from the perspective of the param player
         """
+        if self.winner == -1: return 0  # A draw occurred
         return +1 if player == self.winner else -1
 
     def render(self, mode='human'):
