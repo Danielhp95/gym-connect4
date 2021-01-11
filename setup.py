@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = 0.7
+__version__ = 0.8
 
 setup(name='gym_connect4',
       version=__version__,
